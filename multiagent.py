@@ -60,13 +60,14 @@ import json
 import yaml
 import logging
 import time
-from gptapi_core import load_profile, call_structured
+import asyncio
+from gptapi_core import load_profile, call_structured_async, client
 
 def load_schedule(path):
     with open(path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
-def main():
+async def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--schedule", required=True,
                 help="Path to schedule YAML (e.g. schedules/example-schema.yaml)")
@@ -115,18 +116,17 @@ def main():
     while round_count < max_r and meta_count < max_mi:
         logging.debug(f"Starting round {round_count + 1}")
 
-        # worker pass
-        for w in workers:
-            logging.debug(f"Calling worker '{w}' with {len(messages)} messages in context")
-            start = time.time()
-            try:
-                out = call_structured(profiles[w], messages)
-            except Exception as e:
-                logging.exception(f"Error in call_structured for '{w}': {e}")
-                return
-            duration = time.time() - start
+        # worker pass (run in parallel)
+        tasks = [call_structured_async(profiles[w], messages) for w in workers]
+        start = time.time()
+        try:
+            results = await asyncio.gather(*tasks)
+        except Exception as e:
+            logging.exception(f"Error in worker calls: {e}")
+            return
+        duration = time.time() - start
+        for w, out in zip(workers, results):
             logging.debug(f"Worker '{w}' returned in {duration:.2f}s: {out}")
-
             msg_content = json.dumps(out, separators=",:")
             messages.append({"role": "assistant", "name": w, "content": msg_content})
             conversation.append({"agent": w, "message": out})
@@ -135,7 +135,7 @@ def main():
         logging.debug(f"Calling meta '{meta}' for decision")
         start = time.time()
         try:
-            meta_out = call_structured(profiles[meta], messages)
+            meta_out = await call_structured_async(profiles[meta], messages)
         except Exception as e:
             logging.exception(f"Error in call_structured for meta '{meta}': {e}")
             return
@@ -161,19 +161,18 @@ def main():
             conversation.append({"agent": "user", "message": user_reply})
             continue
         elif action == "web_search":
-            # ------------------------------------------------------------
-            # 1)  `final_output_context` from meta is the query string.
-            # 2)  Pass it straight to run_web_search()
-            # 3)  Feed the returned web info back into the conversation.
-            # ------------------------------------------------------------
             query_prompt = meta_out.get("final_output_context", "").strip()
             if not query_prompt:
                 logging.error("Meta requested web_search but supplied no query.")
                 break
 
             try:
-                from gptapi_core import run_web_search
-                web_info = run_web_search(query_prompt)
+                resp = await client.responses.create(
+                    model="gpt-4o",
+                    tools=[{"type": "web_search_preview"}],
+                    input=query_prompt,
+                )
+                web_info = getattr(resp, "output_text", "").strip()
             except Exception as e:
                 logging.exception(f"web_search tool call failed: {e}")
                 web_info = input("Web-search failed; paste info manually:\n> ").strip()
@@ -209,4 +208,4 @@ def main():
     print(json.dumps(result, indent=2))
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
