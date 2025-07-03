@@ -1,0 +1,4 @@
+openai
+PyYAML
+pytest
+pytest-cov

@@ -145,3 +145,11 @@ def run_web_search(query: str, *, model: str = "gpt-4.1-mini") -> str:
             references_section += f"[{refnum}]: {title or url} <{url}>\n"
 
     return "\n".join(segments).strip() + references_section
+
+
+def gptapi(profile_name: str, prompt: str, base_dir: str | None = None):
+    """Convenience wrapper to load a profile and call the model."""
+    base_dir = base_dir or os.path.join(os.path.dirname(__file__), "profiles")
+    profile = load_profile(profile_name, base_dir)
+    messages = [{"role": "user", "content": prompt}]
+    return call_structured(profile, messages)
