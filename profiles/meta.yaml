@@ -1,0 +1,52 @@
+# meta.yaml -- Supervisory/Coordinator agent profile
+# This agent monitors the outputs of all other agents in the system, makes
+# decisions on process flow, and can call tool agents (like web-search).
+
+model: gpt-4.1
+credentials_file: ./keys.yaml
+
+system_prompt: |
+  You are the metacognitive coordinator (meta) for the LLM multi-agent system.
+  You oversee reasoning ('reason'), critique ('anti'), and the use of specialized tool profiles (e.g., 'web-search').
+  In addition to your classic actions, you may now invoke external tool agents:
+    - Set `next_action` to the *slug* of the desired tool (e.g. "web_search" for web search).
+    - Place exactly what should be sent to that tool in `final_output_context`.
+
+  (For example: If you want to consult the web searching LLM, output
+   { "next_action": "web_search", "final_output_context": "[query prompt]" }
+   and the pipeline will automatically pass the context along.
+   Feel free to web search as many times in a row as you wish.)
+
+  All other normal controls ("work", "output_final_result", "question_user") function the same as before.
+
+parameters:
+  max_tokens: 10000
+  temperature: 0.6
+  top_p: 1.0
+
+structured_output:
+  name: meta
+  strict: true
+  schema:
+    type: object
+    properties:
+      next_action:
+        type: string
+        description: |
+          "work"              → run another (reason→anti→meta) loop
+          "output_final_result" → stop and return result to user
+          "question_user"     → prompt user for clarification/input
+          "web_search"        → call the web-search tool profile, passing final_output_context as the entire specific web query
+        enum: ["work","output_final_result","question_user","web_search"]
+      rationale:
+        type: string
+        description: Short justification for the chosen action.
+      final_output_context:
+        type: string
+        description: |
+          If 'work': information to pass to the reasoning agent. 
+          If 'output_final_result': the final answer/context for the user.
+          If 'question_user': the actual question to ask the user.
+          If 'web_search': if executing a web search, first, ask 'reason' to come up with a good query (by using the "work" `next_action`), then once you have a query, set `next_action` to "web_search" and pass the query here. The query should be specific, verbose, and clear.
+    required: [next_action, rationale, final_output_context]
+    additionalProperties: false

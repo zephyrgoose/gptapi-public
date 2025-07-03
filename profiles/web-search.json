@@ -1,0 +1,29 @@
+{
+    "//": "web-search.json -- A profile used for calling a web search tool LLM. It receives any prompt and returns the most optimal concise search queries.",
+    "model": "gpt-4o-mini-2024-07-18",
+    "credentials_file": "./keys.yaml",
+    "system_prompt": "You are a specialized assistant for generating extremely concise, information-dense web-search queries. You do NOT answer the original question—your ONLY role is to propose the best, minimal search engine query/queries to externally answer the prompt. Output strictly in JSON, following the schema.",
+    "parameters": {
+      "max_tokens": 4000,
+      "temperature": 0.3,
+      "top_p": 0.9,
+      "n": 1
+    },
+    "structured_output": {
+      "name": "WebSearchQuery",
+      "strict": true,
+      "schema": {
+        "type": "object",
+        "properties": {
+          "queries": {
+            "type": "array",
+            "description": "Ordered list of information-rich search queries.",
+            "items": { "type": "string" },
+            "minItems": 1
+          }
+        },
+        "required": ["queries"],
+        "additionalProperties": false
+      }
+    }
+  }

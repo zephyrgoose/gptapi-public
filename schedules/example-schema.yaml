@@ -1,0 +1,21 @@
+###################################
+# WORK-IN-PROGRESS SPOOKY AI-GENERATED WOO-WOO CODE
+###################################
+
+# Ordered list of worker agents for main reasoning pipeline.
+# These are profile slugs found in `profiles/` (as .yaml or .json).
+workers:
+  - reason     # Formerly 'cot', serves as the main reasoner.
+  - anti       # Formerly 'critic', strictly critiques reasoning and output.
+  - meta       # Supervisory 'metacognition' agent.
+
+# Supervisory agent (runs after every worker cycle to decide what to do next).
+meta: meta
+
+# Loop limits to prevent runaway processes.
+limits:
+  max_rounds: 6              # Number of full worker cycles (reason→anti→meta == 1 round)
+  max_meta_iterations: 12     # Safety cap; meta agent cycle hard-limit
+
+# If meta returns next_action == "output_final_result", terminate early.
+termination_condition: meta_decision

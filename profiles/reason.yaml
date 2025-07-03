@@ -1,0 +1,188 @@
+# reason.yaml
+# This agent specializes in performing structured "reasoning" steps—
+# breaks down goals, builds chains of thought, and produces user-targeted outputs.
+
+# Model to be used. 
+model: gpt-4.1-mini
+#model: gpt-4o-mini-2024-07-18
+
+credentials_file: ./keys.yaml
+# External file where API keys are stored. This keeps the main configuration secure and clean.
+
+system_prompt: |
+  You are an assistant specializing in architecting, designing, planning, refactoring, and optimizing solutions across various domains. Your role is generally not to perform the actual execution, but instead to perform comprehensive strategic designing and solution-crafting, performing all the thinking required to deliver the best possible outcome.
+  You excel at identifying inefficiencies, eliminating redundancy, and breaking down complex ideas into manageable components.
+  Additionally, you structure your outputs according to a predefined JSON schema designed for clarity and logical reasoning. This schema ensures that your responses are organized into clear goals, documented assumptions, detailed reasoning for key decisions, and the final user-requested output.
+  A different model, 'meta', will be responsible for coordinating the entire process, including invoking you and other agents, and making decisions (such as searching the web) based on these outputs.
+  **After your chains of thought, you must emit _all_ top-level fields exactly as defined**:
+  1. `goals`
+  2. `highLevelChainOfThought` (with its nested lowLevelChainOfThought)
+  3. `assumptions`
+  4. `userRequestedOutput`
+
+parameters:
+  max_tokens: 10000
+  temperature: 0.98
+  top_p: 0.98
+  n: 2
+  stop: None
+  frequency_penalty: 0.0
+  presence_penalty: 0.0
+
+structured_output:
+  name: reasoning
+  strict: true
+  schema:
+    type: object
+    properties:
+      goals:
+        type: array
+        description: A list of overall objectives and their definitions of done.
+        items:
+          type: object
+          properties:
+            goal:
+              type: string
+              description: A clear and concise statement of the objective to be achieved.
+            definitionOfDone:
+              type: string
+              description: The criteria that signify the successful completion of the goal.
+          required:
+          - goal
+          - definitionOfDone
+          additionalProperties: false
+      assumptions:
+        type: array
+        description: A list of assumptions made before the reasoning process.
+        items:
+          type: object
+          properties:
+            assumption:
+              type: string
+              description: A specific assumption that influences the reasoning or decisions.
+            impact:
+              type: integer
+              description: The impact that making an inaccurate assumption would have, on a scale of 1 (none) to 10 (catastrophic).
+              enum:
+              - 1
+              - 2
+              - 3
+              - 4
+              - 5
+              - 6
+              - 7
+              - 8
+              - 9
+              - 10
+          required:
+          - assumption
+          - impact
+          additionalProperties: false
+      highLevelChainOfThought:
+        type: array
+        description: An overarching, strategic, goal-oriented reasoning process detailing the major decisions and considerations needed to achieve the objectives.
+        items:
+          type: object
+          properties:
+            decision:
+              type: string
+              description: A major decision or consideration made in the reasoning process.
+            rationale:
+              type: string
+              description: The strategic reasoning behind this major decision or consideration, focusing on high-level goals.
+            impact:
+              type: string
+              description: The potential impact or consequence of this decision on the overall goals.
+            evidence:
+              type: string
+              description: Supporting evidence, data, or rationale justifying the decision.
+            lowLevelChainOfThought:
+              type: array
+              description: A detailed, tactical reasoning process that executes the strategy outlined in the high-level chain of thought.
+              items:
+                type: object
+                properties:
+                  decision:
+                    type: string
+                    description: A specific, detailed decision or consideration made in the execution of the strategy.
+                  rationale:
+                    type: string
+                    description: The detailed reasoning behind this specific decision or consideration.
+                  impact:
+                    type: string
+                    description: The immediate impact or consequence of this decision.
+                  evidence:
+                    type: string
+                    description: Supporting evidence or data for the decision at this
+                      level.
+                  result:
+                    type: string
+                    description: The immediate result or outcome following the decision.
+                required:
+                - decision
+                - rationale
+                - impact
+                - evidence
+                - result
+                additionalProperties: false
+            result:
+              type: string
+              description: The outcome, results, or major findings post-chain-of-thought, going over major details.
+          required:
+          - decision
+          - rationale
+          - impact
+          - evidence
+          - lowLevelChainOfThought
+          - result
+          additionalProperties: false
+      assumptions-revisited:
+        type: array
+        description: A list of assumptions revisited during the reasoning process.
+        items:
+          type: object
+          properties:
+            assumption:
+              type: string
+              description: A specific assumption that was revisited, modified, re-evaluated, or, a new assumption made or spliced in after the reasoning process.
+            insight:
+              type: string
+              description: A specific insight or realization gained from revisiting the assumption.
+            impact:
+              type: integer
+              description: The impact that making an inaccurate assumption did or could have, on a scale of 1 (none) to 10 (catastrophic).
+              enum:
+              - 1
+              - 2
+              - 3
+              - 4
+              - 5
+              - 6
+              - 7
+              - 8
+              - 9
+              - 10
+          required:
+          - assumption
+          - insight
+          - impact
+          additionalProperties: false
+      userRequestedOutput:
+        type: string
+        description: The final output or solution in full context as to provide back to the user.
+    required:
+    - goals
+    - assumptions
+    - highLevelChainOfThought
+    - assumptions-revisited
+    - userRequestedOutput
+    additionalProperties: false
+
+logging:
+  enable: true
+  log_level: INFO
+  log_file: ./logs/api_calls.log
+# Logging configuration for debugging and auditing purposes. Helps in tracking and troubleshooting issues.
+
+timeout: 10
+# Timeout setting for the API call, ensuring the program doesn’t hang indefinitely.
