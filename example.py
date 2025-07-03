@@ -28,7 +28,7 @@ def main():
     """
     try:
         # Define the profile name and input file path
-        profile_name = 'cot'  # The YAML profile file name without the extension
+        profile_name = 'reason'  # The YAML profile file name without extension
         input_file_path = './input.txt'  # Path to the input file containing the prompt
 
         # Read the prompt from the input file
