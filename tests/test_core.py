@@ -14,7 +14,9 @@ def _safe_load(data):
         if ':' in line:
             k, v = line.split(':', 1)
             val = v.strip()
-            if val.isdigit():
+            if val == "":
+                val = {}
+            elif val.isdigit():
                 val = int(val)
             d[k.strip()] = val
     return d
@@ -42,7 +44,7 @@ class _DummyOpenAI:
                 content = []
             return Resp()
 
-sys.modules.setdefault('openai', types.SimpleNamespace(OpenAI=_DummyOpenAI))
+sys.modules.setdefault('openai', types.SimpleNamespace(OpenAI=_DummyOpenAI, AsyncOpenAI=_DummyOpenAI))
 
 from gptapi_core import _load_yaml, load_profile, gptapi
 

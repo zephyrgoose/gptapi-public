@@ -2,3 +2,4 @@ openai
 PyYAML
 pytest
 pytest-cov
+pydantic
